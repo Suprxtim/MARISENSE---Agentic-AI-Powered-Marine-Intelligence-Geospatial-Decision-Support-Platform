@@ -387,8 +387,8 @@ export default function App() {
         };
         mediaRecorderRef.current.start();
         setIsRecording(true);
-      } catch (e) {
-        alert("Microphone access denied or unavailable.");
+      } catch (err) {
+        alert(`Microphone Error: ${err.message || err.name || "Unknown error"}`);
       }
     }
   };
