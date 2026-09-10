@@ -15,9 +15,8 @@ DATA AVAILABILITY:
 - PFZ (Potential Fishing Zone): Reference/seeded data (only within Gujarat Coast demo area; derived from chlorophyll + SST gradients)
 
 LOCATION MODES:
-1. Single point: If you have coordinates, pass both latitude and longitude to the tool.
-2. Bounding box / area: If the user specifies an area (e.g. "Lat: 21.0 to 22.5, Lon: 68.5 to 69.5"), pass min_lat, max_lat, min_lon, max_lon.
-3. Named location: Pass location_name to the tool.
+1. Single point: If the user specifies a location by name (e.g. "Mumbai coast", "Bay of Bengal"), determine its approximate latitude and longitude yourself and pass BOTH latitude and longitude to the tool. Do NOT rely solely on location_name.
+2. Bounding box / area: If the user specifies an area, pass min_lat, max_lat, min_lon, max_lon.
 
 When formatting:
 

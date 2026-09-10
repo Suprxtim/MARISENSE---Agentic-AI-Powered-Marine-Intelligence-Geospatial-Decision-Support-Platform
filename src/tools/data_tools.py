@@ -53,9 +53,9 @@ def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> fl
     return R * c
 
 class LocationInput(BaseModel):
-    location_name: Optional[str] = Field(None, description="Name of the location to look up, e.g. 'Harbor_Point'")
-    latitude: Optional[float] = Field(None, description="Latitude of the location")
-    longitude: Optional[float] = Field(None, description="Longitude of the location")
+    location_name: Optional[str] = Field(None, description="Do NOT use for real-world locations (like cities, oceans, or bays). Only use for exact mock zones like 'Harbor_Point'. For ALL real locations, use latitude/longitude.")
+    latitude: Optional[float] = Field(None, description="Latitude of the location. ALWAYS provide this for real-world locations, oceans, or regions.")
+    longitude: Optional[float] = Field(None, description="Longitude of the location. ALWAYS provide this for real-world locations, oceans, or regions.")
     min_lat: Optional[float] = Field(None, description="Southern boundary of a bounding box (minimum latitude)")
     max_lat: Optional[float] = Field(None, description="Northern boundary of a bounding box (maximum latitude)")
     min_lon: Optional[float] = Field(None, description="Western boundary of a bounding box (minimum longitude)")
@@ -83,6 +83,17 @@ def resolve_location(data: dict, location_name: str = None, lat: float = None, l
             return closest_name, closest_data, round(min_distance, 2)
         elif closest_name:
             return None, None, round(min_distance, 2)
+    
+    if location_name and lat is None and lon is None:
+        try:
+            from geopy.geocoders import Nominatim
+            geolocator = Nominatim(user_agent="orca_marine_app")
+            loc = geolocator.geocode(location_name)
+            if loc:
+                return location_name, {"lat": loc.latitude, "lon": loc.longitude}, 0.0
+        except Exception:
+            pass
+
     return None, None, None
 
 def resolve_locations_in_bbox(data: dict, min_lat: float, max_lat: float, min_lon: float, max_lon: float):
@@ -336,14 +347,14 @@ async def get_marine_data(
             pfz_zones = [p for p in copernicus_points if p.get("is_pfz")]
             non_pfz_zones = [p for p in copernicus_points if not p.get("is_pfz")]
 
-            # For each PFZ zone, add live SST
+            # For each PFZ zone (up to a max of 5 to avoid API rate limits and context overflow), add live SST
             enriched_pfz = []
-            for p in pfz_zones:
+            for p in pfz_zones[:5]:
                 sst_live = _fetch_live_sst(p["lat"], p["lon"])
                 enriched_pfz.append({**p, "sst_celsius": sst_live.get("sst_celsius"), "sst_source": "live, Open-Meteo Marine"})
 
             result["pfz_zones_in_area"] = enriched_pfz
-            result["other_locations_in_area"] = non_pfz_zones
+            result["note_pfz"] = f"Showing up to 5 PFZ zones out of {len(pfz_zones)} found in the area."
             result["total_pfz_found"] = len(pfz_zones)
             result["total_copernicus_points"] = len(copernicus_points)
             result["chlorophyll_source"] = "Copernicus Marine Service (CMEMS biogeochemical forecast)"
