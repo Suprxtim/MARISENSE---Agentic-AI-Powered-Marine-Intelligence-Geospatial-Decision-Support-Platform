@@ -44,7 +44,7 @@ def check_geofence(
 ) -> str:
     """
     Checks if a given location or area intersects with any restricted marine zones (MPA, IMBL, restricted_waters).
-    For a single point: provide latitude and longitude (or location_name to auto-resolve).
+    For a single point: ALWAYS provide latitude and longitude for real-world cities. Do NOT use location_name for cities.
     For an area: provide min_lat, max_lat, min_lon, max_lon as a bounding box.
     Returns a JSON string containing the structured result.
     """
