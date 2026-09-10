@@ -305,3 +305,14 @@ body {
 .dark-map-tiles {
   filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
 }
+
+@media (max-width: 1024px) {
+  .app-container {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .chat-column, .map-column, .reasoning-column {
+    flex: 0 0 500px;
+    width: 100%;
+  }
+}
