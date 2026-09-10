@@ -8,6 +8,8 @@ import icon from "leaflet/dist/images/marker-icon.png";
 import iconShadow from "leaflet/dist/images/marker-shadow.png";
 L.Marker.prototype.options.icon = L.icon({ iconUrl: icon, shadowUrl: iconShadow, iconAnchor: [12, 41] });
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function chlToColor(chl) {
@@ -250,7 +252,7 @@ export default function App() {
   }, [voiceEnabled]);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/map-data/chlorophyll")
+    fetch(`${API_BASE_URL}/api/map-data/chlorophyll`)
       .then(r => r.json())
       .then(data => { setChlGrid(data.grid || []); setPfzLayer((data.grid || []).filter(p => p.is_pfz)); })
       .catch(() => {});
@@ -336,7 +338,7 @@ export default function App() {
       synth.speak(utterance);
     } else {
       try {
-        const res = await fetch("http://127.0.0.1:8000/api/tts", {
+        const res = await fetch(`${API_BASE_URL}/api/tts`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: cleanText, language })
         });
@@ -371,7 +373,7 @@ export default function App() {
           formData.append("file", audioBlob, "voice.webm");
           formData.append("language", language);
           try {
-            const res = await fetch("http://127.0.0.1:8000/api/transcribe", { method: "POST", body: formData });
+            const res = await fetch(`${API_BASE_URL}/api/transcribe`, { method: "POST", body: formData });
             const data = await res.json();
             if (data.text) {
               setQuery(data.text);
@@ -399,7 +401,7 @@ export default function App() {
     setReasoningTrace([{ status: "in-progress", agent: "Orchestrator", detail: "Analyzing intent and assigning agents..." }]);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/chat/stream", {
+      const response = await fetch(`${API_BASE_URL}/api/chat/stream`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query: userQuery, target_language: language, session_id: sessionIdRef.current })
       });
