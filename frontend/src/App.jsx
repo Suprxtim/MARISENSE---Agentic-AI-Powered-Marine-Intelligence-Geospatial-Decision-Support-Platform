@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Circle, GeoJSON, CircleMarker, Rectangle, Polyline, useMapEvents, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
-import { ShieldAlert, Ship, Activity, Send, Loader2, Layers, PenTool, X, MapPin, Wind, Thermometer, Fish, Route, CheckCircle, AlertTriangle, XCircle, Sprout, Brain, User, Bot, Navigation } from "lucide-react";
+import { ShieldAlert, Ship, Activity, Send, Loader2, Layers, PenTool, X, MapPin, Wind, Thermometer, Fish, Route, CheckCircle, AlertTriangle, XCircle, Sprout, Brain, User, Bot, Navigation, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import "./index.css";
 import L from "leaflet";
 import icon from "leaflet/dist/images/marker-icon.png";
@@ -229,9 +229,25 @@ export default function App() {
   const [showPfzLayer, setShowPfzLayer]     = useState(false);
   const [routePoints, setRoutePoints]       = useState([]);
   const [liveMetrics, setLiveMetrics]       = useState({});
+  const [isRecording, setIsRecording] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const chatEndRef = useRef(null);
+  const currentAudioRef = useRef(null);
   // Stable session ID for multi-turn conversation context
   const sessionIdRef = useRef(`session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+
+  useEffect(() => {
+    if (!voiceEnabled) {
+      window.speechSynthesis.cancel();
+      if (currentAudioRef.current) {
+        currentAudioRef.current.pause();
+        currentAudioRef.current = null;
+      }
+    }
+  }, [voiceEnabled]);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/map-data/chlorophyll")
@@ -275,9 +291,109 @@ export default function App() {
 
   const toggleLayer = (id) => setMapLayers(prev => prev.map(l => l.id === id ? { ...l, visible: !l.visible } : l));
 
-  const handleSend = async () => {
-    if (!query.trim() || isProcessing) return;
-    const userQuery = query;
+  const handleLocateMe = () => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition((position) => {
+        const lat = position.coords.latitude.toFixed(4);
+        const lng = position.coords.longitude.toFixed(4);
+        setClickedCoordinate([lat, lng]);
+        const q = `Assess maritime safety at my current location: ${lat}, ${lng}`;
+        setQuery(q);
+        setIsLocating(false);
+        // Optionally auto-send: handleSend(q);
+      }, (error) => {
+        setIsLocating(false);
+        alert("Unable to retrieve your location. Please ensure location permissions are granted.");
+      });
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  };
+
+  const playTTS = async (textToSpeak) => {
+    // Strip markdown formatting for cleaner speech
+    const cleanText = textToSpeak.replace(/#+\s*/g, '').replace(/\*\*/g, '');
+    
+    const synth = window.speechSynthesis;
+    const voices = synth.getVoices();
+    const langMap = { "Hindi": "hi-IN", "Gujarati": "gu-IN", "Tamil": "ta-IN", "Bengali": "bn-IN", "English": "en-IN" };
+    const targetLang = langMap[language] || "en-IN";
+    
+    const nativeVoice = voices.find(v => v.lang.startsWith(targetLang) || v.lang.startsWith(targetLang.split('-')[0]));
+    
+    // Stop any existing speech before starting a new one
+    synth.cancel();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    if (nativeVoice) {
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.voice = nativeVoice;
+      utterance.lang = targetLang;
+      synth.speak(utterance);
+    } else {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/api/tts", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: cleanText, language })
+        });
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const audio = new Audio(url);
+        currentAudioRef.current = audio;
+        audio.play();
+      } catch (e) {
+        console.error("TTS Fallback failed", e);
+      }
+    }
+  };
+
+  const toggleRecording = async () => {
+    if (isRecording) {
+      mediaRecorderRef.current?.stop();
+      setIsRecording(false);
+    } else {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        audioChunksRef.current = [];
+        mediaRecorderRef.current.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+        mediaRecorderRef.current.onstop = async () => {
+          const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+          stream.getTracks().forEach(t => t.stop());
+          
+          setIsProcessing(true);
+          setReasoningTrace([{ status: "in-progress", agent: "Transcriber", detail: "Translating voice to text..." }]);
+          const formData = new FormData();
+          formData.append("file", audioBlob, "voice.webm");
+          formData.append("language", language);
+          try {
+            const res = await fetch("http://127.0.0.1:8000/api/transcribe", { method: "POST", body: formData });
+            const data = await res.json();
+            if (data.text) {
+              setQuery(data.text);
+              handleSend(data.text);
+            }
+          } catch(e) {
+            setChatHistory(prev => [...prev, { role: "agent", text: "Voice transcription failed.", isError: true }]);
+          } finally {
+            setIsProcessing(false);
+          }
+        };
+        mediaRecorderRef.current.start();
+        setIsRecording(true);
+      } catch (e) {
+        alert("Microphone access denied or unavailable.");
+      }
+    }
+  };
+
+  const handleSend = async (qOverride) => {
+    const userQuery = typeof qOverride === 'string' ? qOverride : query;
+    if (!userQuery.trim() || isProcessing) return;
     setChatHistory(prev => [...prev, { role: "user", text: userQuery }]);
     setQuery(""); setIsProcessing(true); setLiveMetrics({});
     setReasoningTrace([{ status: "in-progress", agent: "Orchestrator", detail: "Analyzing intent and assigning agents..." }]);
@@ -344,6 +460,11 @@ export default function App() {
       if (finalText) {
         setChatHistory(prev => [...prev, { role: "agent", text: finalText }]);
         setReasoningTrace(prev => [...prev, { status: "done", agent: "Risk Agent", detail: "Verdict reached." }]);
+        
+        if (voiceEnabled) {
+          playTTS(finalText);
+        }
+        
         const parsed = parseAgentResponse(finalText);
         if (parsed?.verdict && clickedCoordinate) {
           setSafetyRing({ lat: clickedCoordinate[0], lng: clickedCoordinate[1], verdict: parsed.verdict });
@@ -361,10 +482,25 @@ export default function App() {
       <div className="glass-panel chat-column">
         <div className="panel-header" style={{ justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}><Ship size={20} /> ORCA Terminal</div>
-          <select value={language} onChange={e => setLanguage(e.target.value)} style={{ background: "rgba(0,0,0,0.4)", color: "var(--text-primary)", border: "1px solid var(--panel-border)", borderRadius: 4, padding: "2px 8px", fontSize: "0.85rem" }}>
-            <option value="English">English</option>
-            <option value="Hindi">Hindi</option>
-          </select>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button 
+              onClick={() => {
+                setVoiceEnabled(!voiceEnabled);
+                if (voiceEnabled) window.speechSynthesis.cancel();
+              }} 
+              style={{ background: "transparent", border: "none", color: voiceEnabled ? "var(--accent)" : "var(--text-secondary)", cursor: "pointer", display: "flex", alignItems: "center" }}
+              title="Toggle Voice Output"
+            >
+              {voiceEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            </button>
+            <select value={language} onChange={e => setLanguage(e.target.value)} style={{ background: "rgba(0,0,0,0.4)", color: "var(--text-primary)", border: "1px solid var(--panel-border)", borderRadius: 4, padding: "2px 8px", fontSize: "0.85rem" }}>
+              <option value="English">English</option>
+              <option value="Hindi">Hindi</option>
+              <option value="Gujarati">Gujarati</option>
+              <option value="Tamil">Tamil</option>
+              <option value="Bengali">Bengali</option>
+            </select>
+          </div>
         </div>
 
         <div style={{ flex: 1, padding: "1rem", overflowY: "auto", display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -391,6 +527,12 @@ export default function App() {
             placeholder="Click the map or type a query..."
             style={{ flex: 1, background: "rgba(0,0,0,0.3)", border: "1px solid var(--panel-border)", color: "white", padding: "0.75rem", borderRadius: 6, outline: "none" }}
           />
+          <button onClick={handleLocateMe} disabled={isLocating} style={{ background: "rgba(0,0,0,0.3)", color: "var(--text-secondary)", border: "1px solid var(--panel-border)", borderRadius: 6, padding: "0 10px", cursor: isLocating ? "wait" : "pointer" }} title="Use My Location">
+            {isLocating ? <Loader2 size={18} className="animate-spin" /> : <MapPin size={18} />}
+          </button>
+          <button onClick={toggleRecording} style={{ background: isRecording ? "var(--alert-red)" : "rgba(0,0,0,0.3)", color: isRecording ? "white" : "var(--text-secondary)", border: "1px solid var(--panel-border)", borderRadius: 6, padding: "0 10px", cursor: "pointer" }} title="Record Voice">
+            {isRecording ? <Mic size={18} /> : <MicOff size={18} />}
+          </button>
           <button onClick={handleSend} style={{ background: "var(--accent)", color: "var(--bg-dark)", border: "none", borderRadius: 6, padding: "0 1rem", cursor: "pointer", fontWeight: 700 }}>
             <Send size={18} />
           </button>

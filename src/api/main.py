@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import StreamingResponse
 import json
 from pydantic import BaseModel
@@ -6,6 +6,9 @@ from src.agents.orchestrator import create_supervisor_graph
 from typing import Optional
 from langchain_core.messages import HumanMessage
 import os
+import httpx
+import tempfile
+import asyncio
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
@@ -50,6 +53,59 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+
+@app.post("/api/transcribe")
+async def transcribe_audio(file: UploadFile = File(...), language: str = Form("English")):
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if not groq_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not set")
+    
+    lang_map = {
+        "Hindi": "hi",
+        "Gujarati": "gu",
+        "Tamil": "ta",
+        "Bengali": "bn",
+        "English": "en"
+    }
+    lang_code = lang_map.get(language, language.lower())
+    
+    audio_bytes = await file.read()
+    url = "https://api.groq.com/openai/v1/audio/translations"
+    headers = {"Authorization": f"Bearer {groq_key}"}
+    files = {"file": (file.filename or "audio.webm", audio_bytes, file.content_type or "audio/webm")}
+    data = {"model": "whisper-large-v3", "temperature": "0.0"}
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, headers=headers, files=files, data=data, timeout=30.0)
+            resp.raise_for_status()
+            return {"text": resp.json().get("text", "")}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+class TTSRequest(BaseModel):
+    text: str
+    language: str = "English"
+
+@app.post("/api/tts")
+async def tts_generate(request: TTSRequest):
+    voice_map = {
+        "Hindi": "hi-IN-SwaraNeural",
+        "Gujarati": "gu-IN-DhwaniNeural",
+        "Tamil": "ta-IN-PallaviNeural",
+        "Bengali": "bn-IN-TanishaaNeural",
+        "English": "en-IN-NeerjaNeural"
+    }
+    voice = voice_map.get(request.language, "en-IN-NeerjaNeural")
+    
+    import edge_tts
+    async def generate():
+        communicate = edge_tts.Communicate(request.text, voice)
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                yield chunk["data"]
+                
+    return StreamingResponse(generate(), media_type="audio/mpeg")
 
 @app.post("/api/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -120,7 +176,7 @@ async def chat_stream(request: ChatRequest):
 
                     if kind == "on_chat_model_stream":
                         tags = event.get("tags", [])
-                        if "visualization_llm" not in tags and "geospatial_llm" not in tags:
+                        if "internal_llm" not in tags and "visualization_llm" not in tags and "geospatial_llm" not in tags:
                             chunk = event["data"]["chunk"]
                             if hasattr(chunk, "content"):
                                 if isinstance(chunk.content, str):

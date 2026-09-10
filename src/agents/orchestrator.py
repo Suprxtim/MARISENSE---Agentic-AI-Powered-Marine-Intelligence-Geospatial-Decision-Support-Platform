@@ -65,7 +65,7 @@ Rules:
         ])
 
         chain = prompt | llm
-        result = await chain.ainvoke({"history": history_text, "query": current_query})
+        result = await chain.ainvoke({"history": history_text, "query": current_query}, config={"tags": ["internal_llm"]})
 
         rewritten = result.content.strip().strip('"').strip("'")
 
@@ -152,7 +152,7 @@ Rules:
         ])
         
         chain = prompt | llm
-        result = await chain.ainvoke({"query": query})
+        result = await chain.ainvoke({"query": query}, config={"tags": ["internal_llm"]})
         intent = result.content.strip().lower()
         
         if "data_query" in intent:
