@@ -20,7 +20,7 @@ def visualization_node(state):
         conversation_text += f"{role}: {content}\n\n"
         
     prompt = f"""You are the Visualization Agent for the ORCA project.
-Extract the location, wave severity, PFZ status, SST, and Geofence status from the conversation.
+Extract the location (look for 'resolved_latitude' and 'resolved_longitude' in the tool outputs), wave severity, PFZ status, SST, and Geofence status from the conversation.
 Return a JSON object EXACTLY matching this schema:
 {{
     "lat": 22.5,
@@ -61,7 +61,7 @@ History:
         return {"layers": []}
         
     # 1. PFZ Marker
-    if data.get("has_pfz"):
+    if str(data.get("has_pfz")).lower() == "true":
         layers.append({
             "id": "pfz_marker",
             "label": "Potential Fishing Zone",
@@ -72,20 +72,23 @@ History:
         })
         
     # 2. SST Indicator
-    if data.get("has_sst") and data.get("sst_value") is not None:
-        sst = float(data.get("sst_value", 0))
-        color = "blue" if sst < 25 else ("orange" if sst < 29 else "red")
-        layers.append({
-            "id": "sst_indicator",
-            "label": f"SST ({sst}°C)",
-            "visible": True,
-            "type": "point",
-            "geojson": {"type": "Point", "coordinates": [lng, lat]},
-            "style": {"color": color, "radius": 12}
-        })
+    if str(data.get("has_sst")).lower() == "true" and data.get("sst_value") is not None:
+        try:
+            sst = float(data.get("sst_value", 0))
+            color = "blue" if sst < 25 else ("orange" if sst < 29 else "red")
+            layers.append({
+                "id": "sst_indicator",
+                "label": f"SST ({sst}°C)",
+                "visible": True,
+                "type": "point",
+                "geojson": {"type": "Point", "coordinates": [lng, lat]},
+                "style": {"color": color, "radius": 12}
+            })
+        except:
+            pass
         
     # 3. Wave Hazard
-    if data.get("has_waves"):
+    if str(data.get("has_waves")).lower() == "true":
         sev = data.get("wave_severity", "blue")
         layers.append({
             "id": "wave_hazard",
@@ -97,8 +100,10 @@ History:
         })
         
     # 4. Geofence Boundary
-    if data.get("inside_restricted_zone"):
-        geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "data", "mock_geofence_data.geojson")
+    inside = data.get("inside_restricted_zone")
+    if str(inside).lower() == "true":
+        # The file is at the root of the project (two levels up from src/agents)
+        geojson_path = os.path.join(os.path.dirname(__file__), "..", "..", "mock_geofence_data.geojson")
         poly_geojson = None
         zone_name = data.get("zone_name", "") or ""
         

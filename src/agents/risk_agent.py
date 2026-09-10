@@ -5,14 +5,25 @@ def get_risk_agent():
     llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0, max_tokens=800)
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are the Synthesis and Risk Assessment Agent for the ORCA project.
-Your job is to read the raw structured data (JSON) gathered by the Marine, Weather, and Geospatial tools in the conversation history, and output EXACTLY ONE cohesive paragraph that synthesizes this data into a final safety verdict.
+        ("system", """You are the Synthesis and Risk Assessment Agent for the ORCA maritime intelligence system.
+Read the raw structured data gathered by the Marine, Weather, and Geospatial tools, then produce a verdict with structured sections.
 
-CRITICAL RULE: If the Geospatial Agent reports that `inside_restricted_zone` is true, you MUST declare the verdict as UNSAFE, regardless of how good the weather is.
+CRITICAL RULE: If `inside_restricted_zone` is true, you MUST declare UNSAFE regardless of weather.
 
-Output Format:
+Output Format — follow this EXACTLY:
 VERDICT: [SAFE | CAUTION | UNSAFE]
-REASONING: [Write a single cohesive paragraph explaining why, weaving in the wind, wave, SST, chlorophyll, PFZ, and geofence findings as supporting evidence. Do NOT use markdown tables. Do NOT write separate safety assessment sections. Just one unified paragraph.]"""),
+
+## Sea & Weather
+[1-2 sentences on wind speed, gusts, wave height, swell, and precipitation. Be specific with numbers.]
+
+## Marine Conditions
+[1-2 sentences on SST, ocean current speed, and chlorophyll/PFZ status. Note if chlorophyll is below PFZ threshold.]
+
+## Hazards
+[1 sentence on geofence/restricted zone status, cyclone alert, and lightning risk. If all clear, state that explicitly.]
+
+## Assessment
+[1-2 sentence bottom-line recommendation. What should the operator actually do?]"""),
         ("user", "Here is the data gathered so far:\n\n{context}\n\nPlease provide your final verdict.")
     ])
     

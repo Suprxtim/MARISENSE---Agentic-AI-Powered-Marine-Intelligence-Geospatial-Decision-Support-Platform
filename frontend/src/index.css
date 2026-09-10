@@ -86,3 +86,71 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 200, 255, 0.4);
 }
+
+/* Map toolbar buttons */
+.map-tool-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 600;
+  transition: all 0.18s ease;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.map-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+.map-tool-btn.active-green {
+  background: rgba(105, 240, 174, 0.15);
+  border-color: var(--success);
+  color: var(--success);
+  box-shadow: 0 0 10px rgba(105, 240, 174, 0.2);
+}
+.map-tool-btn.active-yellow {
+  background: rgba(255, 215, 64, 0.12);
+  border-color: #ffd740;
+  color: #ffd740;
+  box-shadow: 0 0 10px rgba(255, 215, 64, 0.2);
+}
+.map-tool-btn.active-red {
+  background: rgba(255, 82, 82, 0.12);
+  border-color: var(--alert-red);
+  color: var(--alert-red);
+}
+
+/* Draw Instruction Banner */
+.draw-instruction-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(0, 229, 255, 0.08);
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--accent);
+  font-size: 0.82rem;
+  font-weight: 500;
+  animation: bannerPulse 2s ease-in-out infinite;
+}
+
+@keyframes bannerPulse {
+  0%, 100% { opacity: 0.85; }
+  50% { opacity: 1; }
+}
+
+/* Spin animation for loaders */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}

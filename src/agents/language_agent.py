@@ -14,7 +14,7 @@ async def language_node(state: AgentState):
         
     # Get the latest message (which should be from the risk/synthesis agent)
     latest_message = state["messages"][-1]
-    
+    # 2. LLM Translation Fallback
     llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0, max_tokens=1000)
     
     prompt = ChatPromptTemplate.from_messages([

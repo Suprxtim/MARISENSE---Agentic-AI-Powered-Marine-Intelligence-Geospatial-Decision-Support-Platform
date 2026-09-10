@@ -57,6 +57,94 @@
             "wave_height_meters": 3.4,
             "lightning_risk": "High",
             "cyclone_alert": false
+        },
+        "Mumbai_Coast": {
+            "lat": 18.9,
+            "lon": 72.8,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Goa_Coast": {
+            "lat": 15.5,
+            "lon": 73.7,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Kochi_Coast": {
+            "lat": 9.9,
+            "lon": 76.2,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Kanyakumari": {
+            "lat": 8.0,
+            "lon": 77.5,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Chennai_Coast": {
+            "lat": 13.0,
+            "lon": 80.3,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Vizag_Coast": {
+            "lat": 17.7,
+            "lon": 83.3,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Paradip_Coast": {
+            "lat": 20.2,
+            "lon": 86.7,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
+        },
+        "Kolkata_Offshore": {
+            "lat": 21.6,
+            "lon": 88.1,
+            "sst_celsius": 28.0,
+            "chlorophyll_mg_m3": 0.0,
+            "is_pfz": false,
+            "wind_speed_knots": 10.0,
+            "wave_height_meters": 1.0,
+            "cyclone_alert": "None",
+            "lightning_risk": "Low"
         }
     }
 }
