@@ -119,7 +119,9 @@ Rules:
         
     async def risk_node(state: AgentState):
         agent = get_risk_agent()
-        result = await agent.ainvoke({"messages": state["messages"]})
+        target_lang = state.get("target_language", "English")
+        config = {"tags": ["muted_llm"]} if target_lang.lower() != "english" else {}
+        result = await agent.ainvoke({"messages": state["messages"]}, config=config)
         return {"messages": [result["messages"][-1]]}
         
     async def vis_node_wrapper(state: AgentState):
@@ -164,16 +166,19 @@ Rules:
         from langchain_core.prompts import ChatPromptTemplate
         
         query = state["messages"][-1].content
-        target_language = state.get("target_language", "English")
         llm = ChatGroq(model="openai/gpt-oss-120b", temperature=0.7)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are ORCA AI, a helpful and friendly maritime assistant. Respond naturally to the user. Keep it concise. If they report an error, be empathetic. IMPORTANT: Always respond entirely in {target_language}."),
+            ("system", "You are ORCA AI, a helpful and friendly maritime assistant. Respond naturally to the user. Keep it concise. If they report an error, be empathetic."),
             ("user", "{query}")
         ])
         
         chain = prompt | llm
-        result = await chain.ainvoke({"query": query, "target_language": target_language})
+        
+        target_lang = state.get("target_language", "English")
+        config = {"tags": ["muted_llm"]} if target_lang.lower() != "english" else {}
+        
+        result = await chain.ainvoke({"query": query}, config=config)
         
         return {"messages": [result]}
         
@@ -184,6 +189,7 @@ Rules:
     builder.add_node("geospatial", geospatial_node)
     builder.add_node("risk", risk_node)
     builder.add_node("conversational", conversational_node)
+    builder.add_node("language", language_node)
     builder.add_node("visualization", vis_node_wrapper)
     
     # Define the sequential orchestration flow
@@ -193,8 +199,9 @@ Rules:
     builder.add_edge("marine", "weather")
     builder.add_edge("weather", "geospatial")
     builder.add_edge("geospatial", "risk")
-    builder.add_edge("risk", "visualization")
-    builder.add_edge("conversational", "visualization")
+    builder.add_edge("risk", "language")
+    builder.add_edge("conversational", "language")
+    builder.add_edge("language", "visualization")
     builder.add_edge("visualization", END)
     
     return builder.compile()

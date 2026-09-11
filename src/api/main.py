@@ -176,7 +176,7 @@ async def chat_stream(request: ChatRequest):
 
                     if kind == "on_chat_model_stream":
                         tags = event.get("tags", [])
-                        if "internal_llm" not in tags and "visualization_llm" not in tags and "geospatial_llm" not in tags:
+                        if "internal_llm" not in tags and "visualization_llm" not in tags and "geospatial_llm" not in tags and "muted_llm" not in tags:
                             chunk = event["data"]["chunk"]
                             if hasattr(chunk, "content"):
                                 if isinstance(chunk.content, str):

@@ -23,9 +23,7 @@ VERDICT: [SAFE | CAUTION | UNSAFE]
 [1 sentence on geofence/restricted zone status, cyclone alert, and lightning risk. If all clear, state that explicitly.]
 
 ## Assessment
-[1-2 sentence bottom-line recommendation. What should the operator actually do?]
-
-IMPORTANT: You MUST write your entire response natively in {target_language}. Do not output English if {target_language} is something else. Format exactly as above but translated to {target_language}."""),
+[1-2 sentence bottom-line recommendation. What should the operator actually do?]"""),
         ("user", "Here is the data gathered so far:\n\n{context}\n\nPlease provide your final verdict.")
     ])
     
@@ -40,7 +38,7 @@ IMPORTANT: You MUST write your entire response natively in {target_language}. Do
                 text = str(m.content)
             role = "User" if m.type == "human" else "Agent"
             context += f"{role}: {text}\n\n"
-        return {"context": context, "target_language": inputs.get("target_language", "English")}
+        return {"context": context}
         
     def wrap_in_dict(ai_message):
         return {"messages": [ai_message]}
